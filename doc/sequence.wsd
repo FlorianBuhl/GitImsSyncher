@@ -1,0 +1,7 @@
+User -> IMS: Get branches
+IMS --> User: Report branches
+loop for each branch
+  User -> IMS: Fetch branch
+  IMS --> User: Report branch
+  User -> GitHub: Synch branch
+end
