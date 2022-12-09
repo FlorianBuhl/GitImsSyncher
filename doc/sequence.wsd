@@ -1,7 +1,33 @@
+@startuml IMS Git synch sequence
 User -> IMS: Get branches
-IMS --> User: Report branches
-loop for each branch
-  User -> IMS: Fetch branch
-  IMS --> User: Report branch
-  User -> GitHub: Synch branch
+activate IMS
+return branches
+activate User
+User -> Git: Get branches
+deactivate User
+activate Git
+return branches
+loop for each IMS branch
+  alt if IMS branch exists in Git
+    User -> Git: Are IMS checkpoints synched in current IMS branch
+    alt if IMS checkpoints exists in Git
+      User -> Git: Get last synched IMS checkpoint
+        activate Git
+        return IMS checkpoints
+      User -> IMS: Fetch not synched checkpoints
+        activate IMS
+        return checkpoint
+      User -> Git: Synch not synched checkpoints
+        activate Git
+        return synch done
+    end
+  else IMS branch does not exit in Git
+    User -> IMS: Fetch checkpoints
+      activate IMS
+      return checkpoints
+    User -> Git: Synch IMS checkpoint to Git
+      activate Git
+      return synch done
+  end
 end
+@enduml

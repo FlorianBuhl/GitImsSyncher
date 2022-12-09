@@ -93,22 +93,51 @@ def clone_repo(git_repo: str, repo_name: str) -> Repo:
 
 def get_branches(repo: Repo) -> list:
     ''' reports branches of the given repo '''
-    return repo.branches
+    return [h.name for h in repo.heads]
+
+###################################################################################################
+# get_commits
+
+def get_commits(repo: Repo, branch: str):
+    ''' Reports the commits of a branch from newest to oldest '''
+    return repo.iter_commits(branch)
+
+###################################################################################################
+# def get_last_synched_commit_index(commits: list[Commit]) -> int:
+
+def get_last_synched_commit_index(commits: list[Commit]) -> int:
+    ''' reports the index of the last commit which is synched to IMS '''
+    for current_commit in commits:
+        if is_commit_synched_with_ims(current_commit):
+            return current_commit
+    return -1
 
 ###################################################################################################
 # get_last_synched_commit
 
-def get_last_synched_commit(repo: Repo, branch: str):
+def get_last_synched_commit(repo: Repo, branch: str) -> Commit | None:
     ''' searches for a commit which is synched with IMS '''
 
     branch_commits = repo.iter_commits(branch)
 
     # for current_commit in branch_commits[::-1]:
     for current_commit in branch_commits:
-        print(current_commit)
-        print(current_commit.message)
+        if is_commit_synched_with_ims(current_commit):
+            return current_commit
+    return None
 
-    print("get last synched commit")
+###################################################################################################
+# get IMS checkpoint
+
+def get_ims_checkpoint(commit: Commit) -> str:
+    ''' Report the IMS checkpoint of the given commit'''
+
+    regex = r".*IMS CP (\d+\.\d+) .*"
+    match = re.search(regex, commit.message)
+
+    if match:
+        return match.group(1)
+    return None
 
 ###################################################################################################
 # is_commit_synched_with_ims
@@ -118,6 +147,10 @@ def is_commit_synched_with_ims(commit: Commit) -> bool:
     if re.search(r".*IMS CP \d+\.\d+ .*", commit.message) is None:
         return False
     return True
+
+def get_repo_name_from_https(git_repo: str) ->str:
+    ''' Report the git repo name out of the https path'''
+    return git_repo[git_repo.rfind("/")+1 : git_repo.rfind(".")]
 
 # synch_dir_to_git("https://github.com/FlorianBuhl/GitCliTest.git",
 #     "GitCliTest", "main", "D:/Workspaces/syncher/sandbox",
