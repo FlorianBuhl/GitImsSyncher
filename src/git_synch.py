@@ -32,12 +32,16 @@ def synch_dir_to_git(git_repo, repo_name, branch, src_dir, commit_message):
     os.chdir(clone_dir)
 
     # checkout branch
-    if branch not in repo.branches:
-        # if branch does not exist. create one
-        print("Requested branch not in git repository. Branch created")
-        repo.create_head(branch)
-    print(f"Checkout branch {branch}")
-    repo.git.checkout(branch)
+    if len(repo.branches) > 0:
+        if branch not in repo.branches:
+            # if branch does not exist. create one
+            print("Requested branch not in git repository. Branch created")
+            repo.create_head(branch)
+        print(f"Checkout branch {branch}")
+        repo.git.checkout(branch)
+        create_branch_after_commit = False
+    else:
+        create_branch_after_commit = True
 
     # untracked files would be lost. Terminate with exit code to warn the user.
     if len(repo.untracked_files) > 0:
@@ -65,8 +69,11 @@ def synch_dir_to_git(git_repo, repo_name, branch, src_dir, commit_message):
     repo.git.add(all=True)
     print("Commit files")
     repo.index.commit(commit_message)
+
+    if create_branch_after_commit:
+        repo.create_head(branch)
     print("Push to remote")
-    repo.remote().push()
+    # repo.remote().push()
 
     # clean up
     repo.close()
@@ -105,7 +112,7 @@ def get_commits(repo: Repo, branch: str):
 ###################################################################################################
 # def get_last_synched_commit_index(commits: list[Commit]) -> int:
 
-def get_last_synched_commit_index(commits: list[Commit]) -> int:
+def get_last_synched_commit_index(commits: "list[Commit]") -> int:
     ''' reports the index of the last commit which is synched to IMS '''
     for current_commit in commits:
         if is_commit_synched_with_ims(current_commit):
@@ -115,7 +122,7 @@ def get_last_synched_commit_index(commits: list[Commit]) -> int:
 ###################################################################################################
 # get_last_synched_commit
 
-def get_last_synched_commit(repo: Repo, branch: str) -> Commit | None:
+def get_last_synched_commit(repo: Repo, branch: str) -> Commit:
     ''' searches for a commit which is synched with IMS '''
 
     branch_commits = repo.iter_commits(branch)

@@ -2,9 +2,21 @@
   "python.linting.pylintEnabled": true,
   "python.linting.enabled": true,
   "cSpell.words": [
+    "createsandbox",
+    "devpath",
+    "dropsandbox",
+    "noacl",
+    "noassociated",
+    "noattributes",
+    "noconfirm",
+    "noshow",
+    "projectinfo",
+    "rfilter",
     "scandir",
     "strerror",
-    "typer"
+    "typer",
+    "uidtemp",
+    "viewprojecthistory"
   ],
   "python.testing.pytestArgs": [
     "unit_tests"
