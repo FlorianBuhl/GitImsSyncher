@@ -4,6 +4,7 @@
 # imports
 
 import os
+import stat
 import shutil
 import sys
 import re
@@ -15,21 +16,16 @@ from git import Commit
 
 SYS_EXIT_UNTRACKED_FILES_IN_TARGET_REPO = "1: Untracked files in target repository"
 
+def del_rw(action, name, exc):
+    ''' Removes read protection and removes a file'''
+    os.chmod(name, stat.S_IWRITE)
+    os.remove(name)
+
 ###################################################################################################
 # synch_dir_to_git
 
-def synch_dir_to_git(git_repo, repo_name, branch, src_dir, commit_message):
+def synch_dir_to_git(repo, branch, git_dir, src_dir, commit_message):
     ''' Synchs files to github'''
-
-    clone_dir = os.path.join(os.getcwd(), repo_name)
-    if os.path.exists(clone_dir):
-        # Folder already exists.
-        repo = Repo(clone_dir)
-    else:
-        # clone repository
-        print(f"Clone git repo {git_repo} to {clone_dir}")
-        repo = Repo.clone_from(git_repo, clone_dir)
-    os.chdir(clone_dir)
 
     # checkout branch
     if len(repo.branches) > 0:
@@ -52,17 +48,19 @@ def synch_dir_to_git(git_repo, repo_name, branch, src_dir, commit_message):
         sys.exit(SYS_EXIT_UNTRACKED_FILES_IN_TARGET_REPO)
 
     # Remove everything but ".git" folder
-    sub_dirs = os.scandir(clone_dir)
+    sub_dirs = os.scandir(git_dir)
     for sub_dir in sub_dirs:
         print(sub_dir)
         if sub_dir.is_dir() and sub_dir.name != ".git":
-            shutil.rmtree(sub_dir.path)
+            shutil.rmtree(sub_dir.path, onerror=del_rw)
         elif sub_dir.is_file() or sub_dir.is_symlink():
             os.unlink(sub_dir.path)
 
     # copy files from source directory
-    print(f"Copy files from {src_dir} to {clone_dir}")
-    shutil.copytree(src_dir, clone_dir, dirs_exist_ok=True)
+    print(f"Copy files from {src_dir} to {git_dir}")
+    shutil.copytree(src_dir, git_dir, dirs_exist_ok=True)
+    print("files in git_dir:")
+    print(os.listdir(git_dir))
 
     # commit all files and push to server
     print("Add all files to index")
