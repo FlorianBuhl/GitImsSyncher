@@ -7,6 +7,7 @@ import os
 import typer
 import git_synch
 import ims_synch
+from git import Repo
 
 ###################################################################################################
 # CLI
@@ -23,13 +24,26 @@ def synch_ims_to_github(ims_repo: str = typer.Argument(...,
         dest_branch: str = typer.Option(None,
             help="Branch name in github"),
         create_dest_branch: bool = typer.Option(False,
-            help="Create branch in github if not existing")):
+            help="Create branch in github if not existing"),
+        git_dir: str = typer.Option(...,
+            help="Git working directory"),
+        ims_dir: str = typer.Option(...,
+            help="IMS working directory")):
     ''' synch IMS to github'''
     print(f"Synch IMS project {ims_repo} branch {branch} to github {git_repo_url}")
 
+    if not os.path.exists(git_dir):
+        os.makedirs(git_dir)
+        print(f"Directory created: {git_dir}")
+
+    if not os.path.exists(ims_dir):
+        os.makedirs(ims_dir)
+        print(f"Directory created: {ims_dir}")
+
     # clone git repo
     git_repo_name = git_synch.get_repo_name_from_https(git_repo_url)
-    git_repo = git_synch.clone_repo(git_repo_url, git_repo_name)
+    # git_repo = git_synch.clone_repo(git_repo_url, git_repo_name)
+    git_repo = Repo.clone_from(git_repo_url, git_dir)
 
     # get git branches
     git_branches = git_synch.get_branches(git_repo)
@@ -57,6 +71,7 @@ def synch_ims_to_github(ims_repo: str = typer.Argument(...,
     print(f"destination git branch: {dest_branch}")
 
     # determine checkpoints to be synched
+    checkpoints_to_synch: "list[ims_synch.Checkpoint]"
     last_synched_commit = None
     if dest_branch in git_branches:
         last_synched_commit = git_synch.get_last_synched_commit(git_repo, branch)
@@ -72,13 +87,12 @@ def synch_ims_to_github(ims_repo: str = typer.Argument(...,
         checkpoints_to_synch = ims_synch.get_checkpoints_from(ims_repo, branch, None)
 
     for checkpoint in checkpoints_to_synch:
-        ims_repo_dir = os.path.join(os.path.dirname(__file__), "tmp", "ims_repo")
-        sandbox_dir = "d:/uidtemp/checkouts/test1/"
+        sandbox_dir = ims_dir
         sandbox_dir_project = sandbox_dir + "project.pj"
         if not os.path.exists(sandbox_dir):
             os.makedirs(sandbox_dir)
-        ims_synch.checkout(ims_repo, checkpoint, sandbox_dir)
-        git_synch.synch_dir_to_git(git_repo_url, git_repo_name, branch, sandbox_dir, "test commits" + checkpoint)
+        ims_synch.checkout(ims_repo, checkpoint.number, sandbox_dir)
+        git_synch.synch_dir_to_git(git_repo, dest_branch, git_dir, sandbox_dir, "test commits" + checkpoint.number)
         ims_synch.drop_sandbox(sandbox_dir_project)
 
 
