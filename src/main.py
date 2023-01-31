@@ -64,20 +64,17 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
     # cycle through ims branches
     ims_branches = ims_synch.get_branches_with_source(ims_repo)
     for ims_branch in ims_branches:
-        print(f"Doing branch {ims_branch.name}, {ims_branch.base_checkpoint}, {ims_branch.source_dev_path_name}")
         logger.info(f"Doing branch {ims_branch.name}, {ims_branch.base_checkpoint}, {ims_branch.source_dev_path_name}")
 
         # is branch in target repo existing. if not create it.
         synch_complete_branch = False
         is_ims_branch_in_git = ims_branch.name in git_synch.get_branches(git_repo)
         if (ims_branch.name != "Normal") and not is_ims_branch_in_git:
-            # create branch
-            print(f"ims_branch.source_dev_path_name: {ims_branch.source_dev_path_name}")
-            print(f"ims_branch.base_checkpoint: {ims_branch.base_checkpoint}")
+            # create new git branch
+            logger.info("Create git branch %s", ims_branch.name)
             commit_to_create_branch_from = git_synch.get_commit(git_repo,
                 ims_branch.source_dev_path_name, ims_branch.base_checkpoint)
             git_repo.create_head(ims_branch.name, commit_to_create_branch_from)
-            # git_repo.git.checkout(ims_branch.name) # checkout branch
             synch_complete_branch = True
 
         # checkout branch
@@ -110,7 +107,8 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
         # cycle through checkpoints
         for checkpoint in checkpoints_to_synch:
             logger.info("Synch checkpoint: %s", checkpoint.number)
-            synch_ims_checkpoint_to_git(checkpoint, ims_repo, ims_branch.name, git_repo, ims_dir, git_dir)
+            synch_ims_checkpoint_to_git(checkpoint, ims_repo, ims_branch.name,
+                git_repo, ims_dir, git_dir)
 
 @app.command()
 def synch_ims_to_github(ims_repo: str = typer.Argument(...,
@@ -194,8 +192,10 @@ def synch_ims_to_github(ims_repo: str = typer.Argument(...,
             os.makedirs(sandbox_dir)
         ims_synch.checkout(ims_repo, checkpoint.number, sandbox_dir)
         checkpoint_description = ims_synch.get_checkpoint_description(ims_repo, checkpoint.number)
-        git_commit_message = ims_synch.generate_git_commit_message(checkpoint_description, checkpoint.author, checkpoint.number)
-        git_synch.synch_dir_to_git(git_repo, dest_branch, git_dir, sandbox_dir, git_commit_message, checkpoint.author)
+        git_commit_message = ims_synch.generate_git_commit_message(checkpoint_description,
+            checkpoint.author, checkpoint.number)
+        git_synch.synch_dir_to_git(git_repo, dest_branch, git_dir, sandbox_dir,
+            git_commit_message, checkpoint.author)
         ims_synch.drop_sandbox(sandbox_dir_project)
 
 

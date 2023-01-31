@@ -4,7 +4,6 @@
 # imports
 
 import os
-import stat
 import shutil
 import sys
 import re
@@ -12,20 +11,18 @@ from git import Repo
 from git import Commit
 from git import Actor
 
+import util
+
 ###################################################################################################
 # constants
 
 SYS_EXIT_UNTRACKED_FILES_IN_TARGET_REPO = "1: Untracked files in target repository"
 
-def del_rw(action, name, exc):
-    ''' Removes read protection and removes a file'''
-    os.chmod(name, stat.S_IWRITE)
-    os.remove(name)
-
 ###################################################################################################
 # synch_dir_to_git
 
-def synch_dir_to_git(repo: Repo, branch: str, git_dir:str , src_dir: str, commit_message: str, author: str):
+def synch_dir_to_git(repo: Repo, branch: str, git_dir:str , src_dir: str, commit_message: str,
+    author: str):
     ''' Synchs files to github'''
 
     # checkout branch
@@ -51,17 +48,14 @@ def synch_dir_to_git(repo: Repo, branch: str, git_dir:str , src_dir: str, commit
     # Remove everything but ".git" folder
     sub_dirs = os.scandir(git_dir)
     for sub_dir in sub_dirs:
-        print(sub_dir)
         if sub_dir.is_dir() and sub_dir.name != ".git":
-            shutil.rmtree(sub_dir.path, onerror=del_rw)
+            shutil.rmtree(sub_dir.path, onerror=util.del_rw)
         elif sub_dir.is_file() or sub_dir.is_symlink():
             os.unlink(sub_dir.path)
 
     # copy files from source directory
     print(f"Copy files from {src_dir} to {git_dir}")
     shutil.copytree(src_dir, git_dir, dirs_exist_ok=True)
-    print("files in git_dir:")
-    print(os.listdir(git_dir))
 
     # commit all files and push to server
     print("Add all files to index")
@@ -72,7 +66,7 @@ def synch_dir_to_git(repo: Repo, branch: str, git_dir:str , src_dir: str, commit
 
     if create_branch_after_commit:
         repo.create_head(branch)
-    print("Push to remote")
+    # print("Push to remote")
     # repo.remote().push()
 
     # clean up
@@ -130,7 +124,6 @@ def get_last_synched_commit(repo: Repo, branch: str) -> Commit:
 
         # for current_commit in branch_commits[::-1]:
         for current_commit in branch_commits:
-            print(f"current_commit: {current_commit.message}")
             if is_commit_synched_with_ims(current_commit):
                 return current_commit
     return None
@@ -143,11 +136,9 @@ def get_ims_checkpoint(commit: Commit) -> str:
 
     if commit is not None:
         regex = r".*IMS_CP: (\d+\.\d+) .*"
-        print(commit.message)
         match = re.search(regex, commit.message)
 
         if match:
-            print("found one")
             return match.group(1)
     return None
 
@@ -170,7 +161,6 @@ def get_commit(repo: Repo, branch: str, ims_checkpoint_number: int):
     for commit in branch_commits:
         is_synched_to_ims = is_commit_synched_with_ims(commit)
         ims_checkpoint = get_ims_checkpoint(commit)
-        print(f"ims checkpoint : {ims_checkpoint}")
         if is_synched_to_ims and ims_checkpoint == ims_checkpoint_number:
             return commit
     return None
@@ -181,4 +171,3 @@ def get_commit(repo: Repo, branch: str, ims_checkpoint_number: int):
 def get_repo_name_from_https(git_repo: str) ->str:
     ''' Report the git repo name out of the https path'''
     return git_repo[git_repo.rfind("/")+1 : git_repo.rfind(".")]
-
