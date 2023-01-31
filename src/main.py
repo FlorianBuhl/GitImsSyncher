@@ -4,14 +4,14 @@
 # imports
 
 import os
-import logging
+import logging        # standard logger library
 
-import typer
-from git import Repo
+import typer          # handles the command line execution
+from git import Repo  # git library to execute git commands
 
-import git_synch
-import ims_synch
-import util
+import git_synch      # abstracts the git access
+import ims_synch      # abstracts the IMS access
+import util           # helpful basic functions
 
 ###################################################################################################
 
@@ -48,6 +48,9 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
     # setup logger
     util.setup_logger()
     logger = logging.getLogger(__name__)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    logger.addHandler(console)
 
     # create temporary working directories for git and ims
     logger.info("setup temporary working folders")
@@ -59,6 +62,7 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
     # check if git repo is empty
     synch_everything = False
     if len(git_synch.get_branches(git_repo)) <= 0:
+        logger.info("Git Repo is empty. Synch complete IMS repo to git")
         synch_everything = True
 
     # cycle through ims branches
@@ -70,11 +74,14 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
         synch_complete_branch = False
         is_ims_branch_in_git = ims_branch.name in git_synch.get_branches(git_repo)
         if (ims_branch.name != "Normal") and not is_ims_branch_in_git:
-            # create new git branch
-            logger.info("Create git branch %s", ims_branch.name)
+
+            # determine commit from which the branch shall be created.
             commit_to_create_branch_from = git_synch.get_commit(git_repo,
                 ims_branch.source_dev_path_name, ims_branch.base_checkpoint)
             git_repo.create_head(ims_branch.name, commit_to_create_branch_from)
+
+            logger.info("Ims branch does not exist in git."
+                " New Git branch created --> Synch complete ims branch to git")
             synch_complete_branch = True
 
         # checkout branch
@@ -101,12 +108,13 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
         checkpoints_to_synch = ims_synch.get_checkpoints_from(ims_repo, ims_branch.name,
             last_synched_checkpoint_number)
 
-        print(f"Number of checkpoints to synch: {len(checkpoints_to_synch)}")
         logger.info("Number of checkpoints to synch: %s", str(len(checkpoints_to_synch)))
 
         # cycle through checkpoints
         for checkpoint in checkpoints_to_synch:
+            # synch IMS checkpoint to git
             logger.info("Synch checkpoint: %s", checkpoint.number)
+
             synch_ims_checkpoint_to_git(checkpoint, ims_repo, ims_branch.name,
                 git_repo, ims_dir, git_dir)
 
@@ -175,14 +183,12 @@ def synch_ims_to_github(ims_repo: str = typer.Argument(...,
         last_synched_commit = git_synch.get_last_synched_commit(git_repo, branch)
         if last_synched_commit is not None:
             # get ims checkpoint information
-            print("something is synched")
             ims_last_synched_checkpoint_number = git_synch.get_ims_checkpoint(last_synched_commit)
             checkpoints_to_synch = ims_synch.get_checkpoints_from(ims_repo, branch,
                 ims_last_synched_checkpoint_number)
 
     if last_synched_commit is None:
         # complete branch has no IMS checkpoints
-        print("no commit synched")
         checkpoints_to_synch = ims_synch.get_checkpoints_from(ims_repo, branch, None)
 
     for checkpoint in checkpoints_to_synch:
