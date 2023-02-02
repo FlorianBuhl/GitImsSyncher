@@ -36,21 +36,13 @@ def synch_ims_branch_to_git(ims_repo: str, ims_branch: ims_synch.Branch, git_rep
             " New Git branch created --> Synch complete ims branch to git")
         synch_complete_branch = True
 
-    # checkout branch
+    # checkout branch if git repo is not empty
     if len(git_synch.get_branches(git_repo)) > 0:
-        if ims_branch.name == "Normal":
-            git_repo.git.checkout("main")
-        else:
-            git_repo.git.checkout(ims_branch.name)
+        git_repo.git.checkout(ims_branch.name)
 
     last_synched_checkpoint_number = None
     if not synch_complete_branch:
-        # get last synched commit in branch
-        if ims_branch.name == "Normal":
-            # mainline in IMS is called Normal, mainline in git is called main
-            last_synched_commit = git_synch.get_last_synched_commit(git_repo, "main")
-        else:
-            last_synched_commit = git_synch.get_last_synched_commit(git_repo, ims_branch.name)
+        last_synched_commit = git_synch.get_last_synched_commit(git_repo, ims_branch.name)
 
         if last_synched_commit is not None:
             last_synched_checkpoint_number = git_synch.get_ims_checkpoint(last_synched_commit)
@@ -59,7 +51,6 @@ def synch_ims_branch_to_git(ims_repo: str, ims_branch: ims_synch.Branch, git_rep
     # get checkpoints which has to be synched
     checkpoints_to_synch = ims_synch.get_checkpoints_from(ims_repo, ims_branch.name,
         last_synched_checkpoint_number)
-
     logger.info("Number of checkpoints to synch: %s", str(len(checkpoints_to_synch)))
 
     # cycle through checkpoints
@@ -78,9 +69,11 @@ def synch_ims_checkpoint_to_git(checkpoint: ims_synch.Checkpoint, ims_repo: str,
 
     sandbox_dir_project = sandbox_dir + "project.pj"
     ims_synch.checkout(ims_repo, checkpoint.number, sandbox_dir)
+
     checkpoint_description = ims_synch.get_checkpoint_description(ims_repo, checkpoint.number)
     git_commit_message = ims_synch.generate_git_commit_message(checkpoint_description,
         checkpoint.author, checkpoint.number)
+
     git_synch.synch_dir_to_git(git_repo, git_branch_name, git_dir,
         sandbox_dir, git_commit_message, checkpoint.author, False)
     ims_synch.drop_sandbox(sandbox_dir_project)
