@@ -25,7 +25,7 @@ def synch_ims_branch_to_git(ims_repo: str, ims_branch: ims_synch.Branch, git_rep
     # is branch in target repo existing. if not create it.
     synch_complete_branch = False
     is_ims_branch_in_git = ims_branch.name in git_synch.get_branches(git_repo)
-    if (ims_branch.name != "Normal") and not is_ims_branch_in_git:
+    if (ims_branch.name != "main") and not is_ims_branch_in_git:
 
         # determine commit from which the branch shall be created.
         commit_to_create_branch_from = git_synch.get_commit(git_repo,
@@ -44,7 +44,7 @@ def synch_ims_branch_to_git(ims_repo: str, ims_branch: ims_synch.Branch, git_rep
             git_repo.git.checkout(ims_branch.name)
 
     last_synched_checkpoint_number = None
-    if not (synch_complete_branch):
+    if not synch_complete_branch:
         # get last synched commit in branch
         if ims_branch.name == "Normal":
             # mainline in IMS is called Normal, mainline in git is called main
@@ -65,15 +65,15 @@ def synch_ims_branch_to_git(ims_repo: str, ims_branch: ims_synch.Branch, git_rep
     # cycle through checkpoints
     for checkpoint in checkpoints_to_synch:
         # synch IMS checkpoint to git
-        logger.info("Synch checkpoint: %s", checkpoint.number)
+        logger.info("Synch checkpoint: %s to git branch %s", checkpoint.number, ims_branch.name)
 
         synch_ims_checkpoint_to_git(checkpoint, ims_repo, ims_branch.name,
             git_repo, ims_dir, git_dir)
 
 ###################################################################################################
 
-def synch_ims_checkpoint_to_git(checkpoint: ims_synch.Checkpoint, ims_repo: str, branch_name: str,
-    git_repo: Repo, sandbox_dir: str, git_dir):
+def synch_ims_checkpoint_to_git(checkpoint: ims_synch.Checkpoint, ims_repo: str,
+    git_branch_name: str, git_repo: Repo, sandbox_dir: str, git_dir):
     ''' synchs an ims checkpoint to git '''
 
     sandbox_dir_project = sandbox_dir + "project.pj"
@@ -81,8 +81,8 @@ def synch_ims_checkpoint_to_git(checkpoint: ims_synch.Checkpoint, ims_repo: str,
     checkpoint_description = ims_synch.get_checkpoint_description(ims_repo, checkpoint.number)
     git_commit_message = ims_synch.generate_git_commit_message(checkpoint_description,
         checkpoint.author, checkpoint.number)
-    git_synch.synch_dir_to_git(git_repo, branch_name, git_dir,
-        sandbox_dir, git_commit_message, checkpoint.author)
+    git_synch.synch_dir_to_git(git_repo, git_branch_name, git_dir,
+        sandbox_dir, git_commit_message, checkpoint.author, False)
     ims_synch.drop_sandbox(sandbox_dir_project)
 
 ###################################################################################################
@@ -116,65 +116,10 @@ def synch_ims_to_git(ims_repo: str = typer.Argument(...,
     # clone git repo
     git_repo = Repo.clone_from(git_repo_url, git_dir)
 
-    # check if git repo is empty
-    # synch_everything = False
-    # if len(git_synch.get_branches(git_repo)) <= 0:
-    #     logger.info("Git Repo is empty. Synch complete IMS repo to git")
-    #     synch_everything = True
-
     # cycle through ims branches
     ims_branches = ims_synch.get_branches_with_source(ims_repo)
     for ims_branch in ims_branches:
         synch_ims_branch_to_git(ims_repo, ims_branch, git_repo, ims_dir, git_dir)
-        # logger.info(f"Doing branch {ims_branch.name}, {ims_branch.base_checkpoint}, {ims_branch.source_dev_path_name}")
-
-        # # is branch in target repo existing. if not create it.
-        # synch_complete_branch = False
-        # is_ims_branch_in_git = ims_branch.name in git_synch.get_branches(git_repo)
-        # if (ims_branch.name != "Normal") and not is_ims_branch_in_git:
-
-        #     # determine commit from which the branch shall be created.
-        #     commit_to_create_branch_from = git_synch.get_commit(git_repo,
-        #         ims_branch.source_dev_path_name, ims_branch.base_checkpoint)
-        #     git_repo.create_head(ims_branch.name, commit_to_create_branch_from)
-
-        #     logger.info("Ims branch does not exist in git."
-        #         " New Git branch created --> Synch complete ims branch to git")
-        #     synch_complete_branch = True
-
-        # # checkout branch
-        # if len(git_synch.get_branches(git_repo)) > 0:
-        #     if ims_branch.name == "Normal":
-        #         git_repo.git.checkout("main")
-        #     else:
-        #         git_repo.git.checkout(ims_branch.name)
-
-        # last_synched_checkpoint_number = None
-        # if not (synch_everything or synch_complete_branch):
-        #     # get last synched commit in branch
-        #     if ims_branch.name == "Normal":
-        #         # mainline in IMS is called Normal, mainline in git is called main
-        #         last_synched_commit = git_synch.get_last_synched_commit(git_repo, "main")
-        #     else:
-        #         last_synched_commit = git_synch.get_last_synched_commit(git_repo, ims_branch.name)
-
-        #     if last_synched_commit is not None:
-        #         last_synched_checkpoint_number = git_synch.get_ims_checkpoint(last_synched_commit)
-        #         logger.info("last synched checkpoint number: %s", last_synched_checkpoint_number)
-
-        # # get checkpoints which has to be synched
-        # checkpoints_to_synch = ims_synch.get_checkpoints_from(ims_repo, ims_branch.name,
-        #     last_synched_checkpoint_number)
-
-        # logger.info("Number of checkpoints to synch: %s", str(len(checkpoints_to_synch)))
-
-        # # cycle through checkpoints
-        # for checkpoint in checkpoints_to_synch:
-        #     # synch IMS checkpoint to git
-        #     logger.info("Synch checkpoint: %s", checkpoint.number)
-
-        #     synch_ims_checkpoint_to_git(checkpoint, ims_repo, ims_branch.name,
-        #         git_repo, ims_dir, git_dir)
 
 @app.command()
 def synch_ims_to_github(ims_repo: str = typer.Argument(...,

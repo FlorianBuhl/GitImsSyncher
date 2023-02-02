@@ -76,14 +76,14 @@ def get_branches_with_source(ims_project: str) -> "list[Branch]":
 
     # the mainline is not listed in the si projectinfo as dev path.
     # the mainline is always existing and therefore always added.
-    branches = [Branch("Normal", "1.1", None)]
+    branches = [Branch("main", "1.1", None)]
 
     for match in pattern.finditer(stdout):
         # find the dev path name from which this dev path is branched from
         source_checkpoint_num = match.group(2)[:-4].rstrip()
         source_dev_path = ""
         if source_checkpoint_num == "":
-            source_dev_path = "Normal"
+            source_dev_path = "main"
         else:
             for branch in branches:
                 if source_checkpoint_num == branch.base_checkpoint:
@@ -102,7 +102,7 @@ def get_checkpoints_from(ims_project: str, branch:str,
 
     cmd = f"si viewprojecthistory --project={ims_project} "
     cmd += "--fields=revision,author "
-    if branch == "Normal":
+    if branch == "main":
         cmd += "--rfilter=range:1.1-"
     else:
         cmd += f"--rfilter=devpath:{branch}"

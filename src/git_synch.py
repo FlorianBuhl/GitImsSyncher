@@ -7,6 +7,8 @@ import os
 import shutil
 import sys
 import re
+import logging
+
 from git import Repo
 from git import Commit
 from git import Actor
@@ -19,11 +21,12 @@ import util
 SYS_EXIT_UNTRACKED_FILES_IN_TARGET_REPO = "1: Untracked files in target repository"
 
 ###################################################################################################
-# synch_dir_to_git
 
 def synch_dir_to_git(repo: Repo, branch: str, git_dir:str , src_dir: str, commit_message: str,
-    author: str):
+    author: str, do_push: bool):
     ''' Synchs files to github'''
+
+    logger = logging.getLogger(__name__)
 
     # checkout branch
     if len(repo.branches) > 0:
@@ -66,14 +69,16 @@ def synch_dir_to_git(repo: Repo, branch: str, git_dir:str , src_dir: str, commit
 
     if create_branch_after_commit:
         repo.create_head(branch)
-    # print("Push to remote")
-    # repo.remote().push()
+
+    if do_push:
+        print("Push to remote")
+        logger.info("Push to remote")
+        repo.remote().push()
 
     # clean up
     repo.close()
 
 ###################################################################################################
-# clone_repo
 
 def clone_repo(git_repo: str, repo_name: str) -> Repo:
     ''' Clones a git repository and return the repo handle '''
@@ -90,21 +95,18 @@ def clone_repo(git_repo: str, repo_name: str) -> Repo:
     return repo
 
 ###################################################################################################
-# get_branches
 
 def get_branches(repo: Repo) -> list:
     ''' reports branches of the given repo '''
     return [h.name for h in repo.heads]
 
 ###################################################################################################
-# get_commits
 
 def get_commits(repo: Repo, branch: str):
     ''' Reports the commits of a branch from newest to oldest '''
     return repo.iter_commits(branch)
 
 ###################################################################################################
-# def get_last_synched_commit_index(commits: list[Commit]) -> int:
 
 def get_last_synched_commit_index(commits: "list[Commit]") -> int:
     ''' reports the index of the last commit which is synched to IMS '''
@@ -114,7 +116,6 @@ def get_last_synched_commit_index(commits: "list[Commit]") -> int:
     return -1
 
 ###################################################################################################
-# get_last_synched_commit
 
 def get_last_synched_commit(repo: Repo, branch: str) -> Commit:
     ''' searches for a commit which is synched with IMS '''
@@ -129,7 +130,6 @@ def get_last_synched_commit(repo: Repo, branch: str) -> Commit:
     return None
 
 ###################################################################################################
-# get IMS checkpoint
 
 def get_ims_checkpoint(commit: Commit) -> str:
     ''' Report the IMS checkpoint of the given commit'''
@@ -143,7 +143,6 @@ def get_ims_checkpoint(commit: Commit) -> str:
     return None
 
 ###################################################################################################
-# is_commit_synched_with_ims
 
 def is_commit_synched_with_ims(commit: Commit) -> bool:
     ''' Checks if a commit is already synched to an IMS checkpoint '''
@@ -152,7 +151,6 @@ def is_commit_synched_with_ims(commit: Commit) -> bool:
     return True
 
 ###################################################################################################
-# get_Commit()
 
 def get_commit(repo: Repo, branch: str, ims_checkpoint_number: int):
     ''' report the commit belonging to an ims checkpoint in the given branch '''
@@ -166,7 +164,6 @@ def get_commit(repo: Repo, branch: str, ims_checkpoint_number: int):
     return None
 
 ###################################################################################################
-# get_repo_name_from_https
 
 def get_repo_name_from_https(git_repo: str) ->str:
     ''' Report the git repo name out of the https path'''
