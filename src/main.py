@@ -247,5 +247,19 @@ def synch_github_to_ims(git_repo_url: str = typer.Argument(...,
     else:
         print(f"requested branch {branch} not found in git repository")
 
+
+###################################################################################################
+
+@app.command()
+def get_git_branch_info():
+    ''' Synch get_git_branch_info to IMS'''
+
+    # clone git repo
+    git_repo_url = "https://github.com/FlorianBuhl/GitCliTest.git"
+    git_repo_name = git_synch.get_repo_name_from_https(git_repo_url)
+    git_repo = git_synch.clone_repo(git_repo_url, git_repo_name)
+
+
+    print(git_synch.get_branches(git_repo))
 if __name__ == "__main__":
     app()
